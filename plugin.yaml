@@ -1,0 +1,29 @@
+name: wake
+version: "0.2.0"
+description: "Lets the agent speak first: scheduled wakes and cron output arrive as hidden turns in your chat, and the agent messages you in its own voice."
+config_schema:
+  user_name:
+    type: string
+    default: "the user"
+    label: Your name
+    description: Who the agent should message, used in the wake prompts.
+  session_title:
+    type: string
+    default: "Bot Chat"
+    label: Chat to wake
+    description: Title of the chat that wakes are delivered into.
+  timezone:
+    type: string
+    default: ""
+    label: Timezone
+    description: IANA timezone for the wake CLI (e.g. Europe/London). Empty uses the system timezone.
+  wake_prompt:
+    type: string
+    default: ""
+    label: Wake prompt override
+    description: Optional. Replaces the hidden wake prompt. Placeholders {note} and {user}.
+  cron_prompt:
+    type: string
+    default: ""
+    label: Cron prompt override
+    description: Optional. Replaces the prompt for cron output. Placeholders {name}, {body} and {user}.
