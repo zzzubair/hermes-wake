@@ -91,7 +91,8 @@ def from_delivery(text):
     if "Gateway draining" in body[:400]:
         return None  # a run that hit a gateway restart; the next run retries on its own
     s = settings()
-    failed = bool(re.search(r"(?i)\b(failed|error|traceback|blocked)\b", body[:400]))
+    # Only Hermes's own failure frame counts; a report that merely mentions "failed" (e.g. a payment-failed email) is not a job failure.
+    failed = bool(re.search(r"Cron '[^']*' failed:|^Traceback \(most recent call last\)", body[:400], re.M))
     tpl = FAIL_PROMPT if failed else (s["cron_prompt"] or CRON_PROMPT)
     note = tpl.format(name=name, id=jid, body=body[:6000], user=s["user_name"])
     return add_wake(note, ("⚠️ " if failed else "") + name)
