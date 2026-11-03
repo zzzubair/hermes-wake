@@ -88,6 +88,8 @@ def from_delivery(text):
         name, jid, body = m.group(1).strip(), m.group(2), m.group(3).strip()
     if not body or body.upper().strip("[]. ") == "SILENT":
         return None
+    if "Gateway draining" in body[:400]:
+        return None  # a run that hit a gateway restart; the next run retries on its own
     s = settings()
     failed = bool(re.search(r"(?i)\b(failed|error|traceback|blocked)\b", body[:400]))
     tpl = FAIL_PROMPT if failed else (s["cron_prompt"] or CRON_PROMPT)
