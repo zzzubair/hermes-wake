@@ -119,17 +119,9 @@ async def _deliver(runner, item):
     late = time.time() - item["at"]
     note = item["note"] + (f"\n(Delivered {int(late // 60)} min late.)" if late > 600 else "")
     text = (s["wake_prompt"] or WAKE_PROMPT).format(note=note, user=s["user_name"])
-    # Trusted automation admission (internal=True): the turn persists as internal_notification, so a
-    # quiet wake may end on [SILENT] and vanish instead of the gateway's "unexpected silence" reply.
-    # Queued FIFO behind a running turn, like heartbeats and process completions.
-    import json as _json
-    from gateway.platforms.event import MessageEvent, MessageType
-    identity = _json.dumps(["plugin", "wake", live.route, item["id"]], separators=(",", ":"))
-    event = MessageEvent(text=text, message_type=MessageType.TEXT, source=live.source, internal=True,
-                         allow_gateway_control=False, message_id=identity,
-                         metadata={"gateway_session_key": live.route, "gateway_session_id": ref.session_id})
+    # hidden: no client draws it as a user bubble. "queue": FIFO behind a running turn. Same id: idempotent retry.
     async with runner._plugin_injection_scope(live.source, home):
-        await authority.admit_automation(runner._adapter_for_source(live.source), event, identity)
+        await authority.submit(actor, Submission("wake:" + item["id"], ref, {"text": text, "display_kind": "hidden"}, "queue"))
 
 
 def tick(ctx):
