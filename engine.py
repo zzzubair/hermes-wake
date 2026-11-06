@@ -124,12 +124,104 @@ async def _deliver(runner, item):
         await authority.submit(actor, Submission("wake:" + item["id"], ref, {"text": text, "display_kind": "hidden"}, "queue"))
 
 
+_warned = set()
+
+
+def _warn_once(key, msg, *args):
+    if key not in _warned:
+        _warned.add(key)
+        log.warning(msg, *args)
+
+
+def _hermes_hooks(runner):
+    """The three Hermes internals the silent-wake hook needs, or None (warned once) when an update renamed
+    one: wakes then go out as plain hidden submits, and a [SILENT] gets Hermes's fallback line again."""
+    try:
+        from gateway.session_display import _submission_turn
+        from hermes_state import SessionDB
+        orig = type(runner).__dict__.get("_wake_silence_orig") or type(runner)._silence_allowed_for_source
+        if not callable(getattr(SessionDB, "set_latest_matching_message_display_kind", None)):
+            raise AttributeError("SessionDB.set_latest_matching_message_display_kind")
+        return orig, _submission_turn
+    except Exception as exc:
+        _warn_once("hooks", "wake: silent-wake hook off, Hermes internals changed (%s); "
+                   "wakes still deliver, but [SILENT] wakes show Hermes's fallback line", exc)
+        return None
+
+
+def _is_wake_turn(submission_turn, display_kind, agent_result):
+    """True while the gateway shapes the reply of a turn this plugin submitted (request id "wake:...")."""
+    if display_kind != "hidden" or not isinstance(agent_result, dict):
+        return False
+    if any(str(k).startswith("queued_terminal_") for k in agent_result):
+        return False  # a /queue chain's terminal turn is someone else's
+    bound = submission_turn.get()
+    return bool(bound) and str(bound[1]).startswith("wake:")
+
+
+def _hide_silent_reply(runner, agent_result):
+    """The [SILENT] reply stays in the transcript (the model needs the turn pair), typed hidden so no app
+    draws it, the same as its hidden wake prompt."""
+    from gateway.session_authorities import authority_for_home
+    db = authority_for_home(runner, hermes_home()).db
+    sid = agent_result.get("session_id")
+    if not sid:
+        row = db.get_session_by_title(settings()["session_title"])
+        sid = row and (db.get_compression_tip(row["id"]) or row["id"])
+    if not db.set_latest_matching_message_display_kind(
+            sid, role="assistant", content=agent_result.get("final_response") or "", display_kind="hidden"):
+        log.warning("wake: silent reply row not found in %s", sid)
+
+
+def allow_wake_silence(runner):
+    """A hidden submit counts as a human turn, so the gateway swaps a bare [SILENT] for its "unexpected
+    silence" line. Submit has no reply_expected field, so let wake turns (and only those) end silent.
+    The gateway asks this only for a bare silence marker. Idempotent; a reloaded engine re-wraps the
+    same original. Any failure in here answers with Hermes's own rule, so a reply is never lost."""
+    hooks = _hermes_hooks(runner)
+    if hooks is None:
+        return
+    orig, submission_turn = hooks
+
+    def silence_allowed(self, *args, **kwargs):
+        try:
+            source, display_kind, reply_expected, agent_result = args
+            wake = _is_wake_turn(submission_turn, display_kind, agent_result)
+        except Exception as exc:
+            _warn_once("call", "wake: silent-wake hook skipped, unexpected call shape (%s)", exc)
+            wake = False
+        if not wake:
+            return orig(self, *args, **kwargs)
+        try:
+            _hide_silent_reply(self, agent_result)
+        except Exception:
+            log.warning("wake: could not hide the silent reply row", exc_info=True)
+        log.info("wake: silent wake turn, nothing delivered")
+        return True
+
+    cls = type(runner)
+    cls._wake_silence_orig = orig
+    cls._silence_allowed_for_source = silence_allowed
+
+
+def _ensure_silence_hook(runner):
+    if getattr(getattr(type(runner), "_silence_allowed_for_source", None), "__module__", None) == __name__:
+        return
+    if "hooks" in _warned:
+        return  # already found the internals missing in this engine version
+    try:
+        allow_wake_silence(runner)
+    except Exception as exc:
+        _warn_once("hooks", "wake: silent-wake hook not installed (%s); wakes still deliver", exc)
+
+
 def tick(ctx):
     host = ctx._manager._gateway_message_injector
     runner = host[0] if host else None
     loop = getattr(runner, "_gateway_loop", None)
     if runner is None or loop is None or loop.is_closed() or not getattr(runner, "_running", False):
         return
+    _ensure_silence_hook(runner)
     if getattr(runner, "_draining", False):
         return  # restart in progress: keep everything queued
     now = time.time()
