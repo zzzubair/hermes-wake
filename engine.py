@@ -124,12 +124,65 @@ async def _deliver(runner, item):
         await authority.submit(actor, Submission("wake:" + item["id"], ref, {"text": text, "display_kind": "hidden"}, "queue"))
 
 
+def _is_wake_turn(display_kind, agent_result):
+    """True while the gateway shapes the reply of a turn this plugin submitted (request id "wake:...")."""
+    if display_kind != "hidden" or any(k.startswith("queued_terminal_") for k in agent_result or {}):
+        return False  # a /queue chain's terminal turn is someone else's
+    try:
+        from gateway.session_display import _submission_turn
+        bound = _submission_turn.get()
+    except Exception:
+        return False
+    return bool(bound) and str(bound[1]).startswith("wake:")
+
+
+def _hide_silent_reply(runner, agent_result):
+    """The [SILENT] reply stays in the transcript (the model needs the turn pair), typed hidden so no app
+    draws it, the same as its hidden wake prompt."""
+    authority = authority_for_home(runner, hermes_home())
+    sid = (agent_result or {}).get("session_id")
+    if not sid:
+        row = authority.db.get_session_by_title(settings()["session_title"])
+        sid = row and (authority.db.get_compression_tip(row["id"]) or row["id"])
+    if not authority.db.set_latest_matching_message_display_kind(
+            sid, role="assistant", content=agent_result.get("final_response") or "", display_kind="hidden"):
+        log.warning("wake: silent reply row not found in %s", sid)
+
+
+def authority_for_home(runner, home):
+    from gateway.session_authorities import authority_for_home as find
+    return find(runner, home)
+
+
+def allow_wake_silence(runner):
+    """A hidden submit counts as a human turn, so the gateway swaps a bare [SILENT] for its "unexpected
+    silence" line. Submit has no reply_expected field, so let wake turns (and only those) end silent.
+    Idempotent; a reloaded engine re-wraps the same original."""
+    cls = type(runner)
+    orig = cls.__dict__.get("_wake_silence_orig") or cls._silence_allowed_for_source
+
+    def silence_allowed(self, source, display_kind, reply_expected, agent_result):
+        if _is_wake_turn(display_kind, agent_result):
+            try:
+                _hide_silent_reply(self, agent_result)
+            except Exception:
+                log.warning("wake: could not hide the silent reply row", exc_info=True)
+            log.info("wake: silent wake turn, nothing delivered")
+            return True
+        return orig(self, source, display_kind, reply_expected, agent_result)
+
+    cls._wake_silence_orig = orig
+    cls._silence_allowed_for_source = silence_allowed
+
+
 def tick(ctx):
     host = ctx._manager._gateway_message_injector
     runner = host[0] if host else None
     loop = getattr(runner, "_gateway_loop", None)
     if runner is None or loop is None or loop.is_closed() or not getattr(runner, "_running", False):
         return
+    if getattr(type(runner)._silence_allowed_for_source, "__module__", None) != __name__:
+        allow_wake_silence(runner)
     if getattr(runner, "_draining", False):
         return  # restart in progress: keep everything queued
     now = time.time()
