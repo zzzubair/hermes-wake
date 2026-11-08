@@ -1,0 +1,28 @@
+# Draft entry for NousResearch/hermes-agent: plugin-catalog/wake.yaml
+# Before submitting: replace `sha` with the full 40-character commit on zzzubair/hermes-wake main that
+# you want reviewed (the merge commit of the 1.0.0 PR), and check `version` matches plugin.yaml there.
+name: wake
+title: Wake
+repo: https://github.com/zzzubair/hermes-wake
+sha: 0000000000000000000000000000000000000000
+description: "Lets your agent speak first. A note it scheduled for later, or a cron job's report (deliver: wake_agent), arrives as a turn for your own agent in the one chat you bind with /wakes here: the Desktop Bot Chat, or a Discord, Slack or Telegram DM. The agent checks what is worth checking and messages you in its own voice, or stays silent. Wakes wait until that chat is idle and keep their order. Setup is agent-led through the bundled skill wake:setup: pick the chat, your name and timezone, allow gateway injection, then a test wake. Disclosure: starts agent turns in the bound chat through ctx.inject_message (needs plugins.entries.wake.allow_gateway_injection: true), billed like any message, with your normal tools and approvals. With precheck: auto (the default), each wake for a Desktop, TUI or CLI chat costs one extra small structured call on your active model through ctx.llm, carrying the wake text (for cron, the job report, up to 6,000 characters); set precheck: off to remove it. A background task in the gateway reads the plugin's local queue every 5 s. The pre_llm_call and on_session_end hooks run on every turn to spot wake notices and track when the bound chat is busy, and store no message text. Queued notes, cron reports, the bound chat's session key and a capped delivery log are stored in plaintext in the plugin's data directory. On first start it moves a 0.x queue out of $HERMES_HOME/state/wake/. No third-party network calls, no shell commands, no credentials, no telemetry."
+maintainer: zzzubair
+tier: community
+category: automation
+requires_hermes: ">=0.23.0"
+docs_url: https://github.com/zzzubair/hermes-wake#readme
+version: "1.0.0"
+readme: true
+platforms: [linux, macos]
+known_issues:
+  - "Desktop and TUI chats show a one-line notice (⏰ <title>) as a user bubble for each wake: ctx.inject_message has no hidden option, and the Desktop draws internal_notification rows as user bubbles. Messaging platforms show only the agent's reply."
+  - "On the Desktop, a wake that passes the skip-check and is then answered [SILENT] posts nothing, but the transcript still draws the [SILENT] row, because Hermes stores a suppressed silence reply as a normal assistant row."
+  - "A Desktop Bot Chat accepts wakes only while it is live, so open it once after a gateway restart. Queued wakes wait until then."
+capabilities:
+  provides_tools:
+    - wake
+  provides_hooks:
+    - pre_llm_call
+    - on_session_end
+  provides_middleware: []
+  requires_env: []
