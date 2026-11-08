@@ -1,29 +1,36 @@
 name: wake
-version: "0.2.0"
-description: "Lets the agent speak first: scheduled wakes and cron output arrive as hidden turns in your chat, and the agent messages you in its own voice."
+version: "1.0.0"
+description: "Lets the agent speak first: scheduled notes and cron output wake it in the chat you pick (Desktop Bot Chat, Discord, Slack, Telegram...), and it messages you in its own voice or stays silent when nothing matters."
+author: Zubair Shaik
+requires_hermes: ">=0.23.0"
+provides_tools:
+  - wake
+provides_hooks:
+  - pre_llm_call
+  - on_session_end
 config_schema:
   user_name:
     type: string
     default: "the user"
     label: Your name
     description: Who the agent should message, used in the wake prompts.
-  session_title:
-    type: string
-    default: "Bot Chat"
-    label: Chat to wake
-    description: Title of the chat that wakes are delivered into.
   timezone:
     type: string
     default: ""
     label: Timezone
-    description: IANA timezone for the wake CLI (e.g. Europe/London). Empty uses the system timezone.
+    description: IANA timezone for wake times (e.g. Europe/London). Empty uses the system timezone.
   wake_prompt:
     type: string
     default: ""
     label: Wake prompt override
-    description: Optional. Replaces the hidden wake prompt. Placeholders {note} and {user}.
+    description: Optional. Replaces the wake prompt. Placeholders {note} and {user}.
   cron_prompt:
     type: string
     default: ""
     label: Cron prompt override
     description: Optional. Replaces the prompt for cron output. Placeholders {name}, {body} and {user}.
+  precheck:
+    type: string
+    default: "auto"
+    label: Skip check
+    description: "auto (default): on chats that show the wake line (Desktop Bot Chat, TUI, CLI), one small call on your model decides first whether a wake is worth sending, so skipped wakes leave no trace. always: on every chat. off: never; the agent decides and may reply [SILENT]."
