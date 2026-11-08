@@ -112,6 +112,7 @@ optional.
 
 ## Limits
 
+- **Linux and macOS only.** The queue uses POSIX file locks.
 - **One chat per profile.** Wakes go to the chat bound last.
 - **Desktop shows a one-line notice per wake.** Hermes has no public way for a plugin to start a
   hidden turn, and the Desktop draws plugin-started turns as your own bubble. Wake keeps that bubble
