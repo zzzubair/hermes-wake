@@ -47,18 +47,17 @@ hermes plugins enable wake
 hermes gateway restart             # once, so the gateway picks up the Wake Agent cron target
 ```
 
-Not in the catalog yet on your Hermes? `hermes plugins install zzzubair/hermes-wake` installs it
-straight from GitHub. Needs Hermes 0.23.0 or newer.
+If `wake` isn't in the catalog on your Hermes, `hermes plugins install zzzubair/hermes-wake`
+installs it from GitHub. Needs Hermes 0.23.0 or newer.
 
-Then tell your agent: **"set up wakes"**. It loads the bundled `wake:setup` skill and walks you
-through three questions: which chat, your name, your timezone. Then it asks you to allow one
-permission and sends a test wake. You can do the same by hand:
+Then allow wakes to start a turn, and bind a chat:
 
 ```bash
-hermes config set plugins.entries.wake.allow_gateway_injection true   # lets wakes start a turn in your chat
+hermes config set plugins.entries.wake.allow_gateway_injection true
 ```
 
-Then, in the chat that should get wakes, type `/wakes here`, then `/wakes test`.
+In the chat that should get wakes, type `/wakes here`, then `/wakes test`. Saying "set up wakes"
+to your agent does the same through the bundled `wake:setup` skill.
 
 With no setup at all, the first wake your agent schedules binds the chat it was scheduled from.
 
