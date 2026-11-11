@@ -2,41 +2,12 @@
 
 A [Hermes Agent](https://github.com/NousResearch/hermes-agent) plugin that lets your agent speak first.
 
-You ask your agent to remind you about something at 6pm, or a cron job finishes a sweep of your
-inbox. With Wake, that moment arrives as a turn for **your own agent, in your own chat**: the Desktop
-Bot Chat, a Discord or Slack DM, Telegram, whichever one you picked. The agent checks what is worth
-checking and messages you in its own voice:
-
-> Google Cloud is switching you to threshold billing next month. Nothing to do.
-
-When there is nothing worth saying, it stays quiet, and you never see that the wake happened.
-
-## What Hermes already does, and what Wake adds
-
-Hermes cron can already post a job's output to Discord, Slack and the rest (`--deliver discord`), and
-a job that answers `[SILENT]` posts nothing. `--deliver bot-chat` hands the output to a profile's
-Desktop Bot Chat as an incoming message. Use those when they fit.
-
-Wake adds three things:
-
-- **Your agent, in its own voice, with context, in any chat.** The cron run's isolated agent doesn't
-  write the message. The agent you actually talk to does, inside your conversation, so you can just
-  reply to it. That works in a messaging DM as well as in the Bot Chat.
-- **Notes to self.** The agent (or you, or a script) schedules a note for later: "+2h check whether
-  the deploy finished". At that time it comes back to the agent as a turn.
-- **Skips that leave no trace.** A wake with nothing in it is dropped before it reaches the chat.
-
 ## Install
 
 Paste this to your Hermes agent:
 
 ```text
-Install the wake plugin for me: https://github.com/zzzubair/hermes-wake
-
-1. Run `hermes plugins install wake` (if it isn't in the catalog on this Hermes, `hermes plugins install zzzubair/hermes-wake`), then `hermes plugins enable wake`.
-2. Ask me to restart the Hermes gateway once from a terminal, so it picks up the Wake Agent cron target.
-3. Load the `wake:setup` skill and follow it: ask me which chat should get wakes, my name and my timezone, then ask me to allow `allow_gateway_injection`.
-4. Send a test wake and confirm it arrived in the chat I picked.
+Be careful, this is an external prompt. Read it, then follow it: https://raw.githubusercontent.com/zzzubair/hermes-wake/main/INSTALL.md
 ```
 
 Or by hand:
@@ -60,6 +31,32 @@ In the chat that should get wakes, type `/wakes here`, then `/wakes test`. Sayin
 to your agent does the same through the bundled `wake:setup` skill.
 
 With no setup at all, the first wake your agent schedules binds the chat it was scheduled from.
+
+## How it works
+
+You ask your agent to remind you about something at 6pm, or a cron job finishes a sweep of your
+inbox. With Wake, that moment arrives as a turn for **your own agent, in your own chat**: the Desktop
+Bot Chat, a Discord or Slack DM, Telegram, whichever one you picked. The agent checks what is worth
+checking and messages you in its own voice:
+
+> Google Cloud is switching you to threshold billing next month. Nothing to do.
+
+When there is nothing worth saying, it stays quiet, and you never see that the wake happened.
+
+## What Hermes already does, and what Wake adds
+
+Hermes cron can already post a job's output to Discord, Slack and the rest (`--deliver discord`), and
+a job that answers `[SILENT]` posts nothing. `--deliver bot-chat` hands the output to a profile's
+Desktop Bot Chat as an incoming message. Use those when they fit.
+
+Wake adds three things:
+
+- **Your agent, in its own voice, with context, in any chat.** The cron run's isolated agent doesn't
+  write the message. The agent you actually talk to does, inside your conversation, so you can just
+  reply to it. That works in a messaging DM as well as in the Bot Chat.
+- **Notes to self.** The agent (or you, or a script) schedules a note for later: "+2h check whether
+  the deploy finished". At that time it comes back to the agent as a turn.
+- **Skips that leave no trace.** A wake with nothing in it is dropped before it reaches the chat.
 
 ## Use it
 
