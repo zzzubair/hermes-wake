@@ -1,4 +1,6 @@
-# Install wake (prompt for a Hermes agent)
+# Install Wake
+
+Wake is a [Hermes Agent](https://github.com/NousResearch/hermes-agent) plugin that lets your agent speak first. This file is the install prompt for a Hermes agent.
 
 Install the wake plugin for me: https://github.com/zzzubair/hermes-wake
 
